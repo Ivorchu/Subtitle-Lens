@@ -1,20 +1,36 @@
 import type { TranslationCache } from './cache';
+import type { ExtensionSettings, TranslateRequest, TranslateResponse } from './types';
 
 export class Translator {
   constructor(private readonly cache: TranslationCache) {}
 
-  async translate(text: string, targetLang: string): Promise<string> {
-    const cached = this.cache.get(text, targetLang);
+  async translate(text: string, settings: ExtensionSettings): Promise<string> {
+    const { targetLanguage, provider, deeplApiKey } = settings;
+
+    const cached = this.cache.get(text, targetLanguage);
     if (cached !== undefined) return cached;
 
-    const translated = await this.mockTranslate(text, targetLang);
-    this.cache.set(text, targetLang, translated);
-    return translated;
-  }
+    const request: TranslateRequest = {
+      type: 'TRANSLATE',
+      text,
+      targetLang: targetLanguage,
+      provider,
+      deeplApiKey,
+    };
 
-  // Replace this method with a real translation API (e.g. Google Translate, DeepL).
-  private async mockTranslate(text: string, targetLang: string): Promise<string> {
-    await new Promise(resolve => setTimeout(resolve, 10));
-    return `[${targetLang}] ${text}`;
+    const response = await new Promise<TranslateResponse>((resolve, reject) => {
+      chrome.runtime.sendMessage(request, (resp: TranslateResponse) => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message));
+        } else {
+          resolve(resp);
+        }
+      });
+    });
+
+    if (!response.ok) throw new Error(response.error);
+
+    this.cache.set(text, targetLanguage, response.result);
+    return response.result;
   }
 }

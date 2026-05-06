@@ -1,13 +1,21 @@
 import { YouTubeAdapter } from '../sites/youtube';
+import { NetflixAdapter } from '../sites/netflix';
+import { DisneyAdapter } from '../sites/disney';
+import { PrimeVideoAdapter } from '../sites/primevideo';
 import { SubtitleOverlay } from './overlay';
 import { TranslationCache } from '../shared/cache';
 import { Translator } from '../shared/translator';
 import { debounce } from '../shared/debounce';
-import { DEFAULT_SETTINGS, STORAGE_KEY } from '../shared/config';
-import type { ExtensionSettings, RuntimeMessage } from '../shared/types';
+import { DEFAULT_SETTINGS, STORAGE_KEY, STATUS_KEY } from '../shared/config';
+import type { ExtensionSettings, ContentMessage, TranslationStatus } from '../shared/types';
 import type { SiteAdapter } from '../sites/adapter';
 
-const ADAPTERS: SiteAdapter[] = [new YouTubeAdapter()];
+const ADAPTERS: SiteAdapter[] = [
+  new YouTubeAdapter(),
+  new NetflixAdapter(),
+  new DisneyAdapter(),
+  new PrimeVideoAdapter(),
+];
 
 class SubtitleLens {
   private adapter: SiteAdapter | null = null;
@@ -17,6 +25,7 @@ class SubtitleLens {
   private readonly cache = new TranslationCache();
   private readonly translator = new Translator(this.cache);
   private lastRawText = '';
+  private inErrorState = false;
   private isSetup = false;
   private pollTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -31,10 +40,21 @@ class SubtitleLens {
         return;
       }
 
-      const translated = await this.translator.translate(text, this.settings.targetLanguage);
+      const translated = await this.translator.translate(text, this.settings);
       this.overlay?.show(translated, this.settings);
+      if (this.inErrorState) {
+        this.inErrorState = false;
+        void chrome.storage.local.remove(STATUS_KEY);
+      }
     } catch (err) {
-      console.error('[SubtitleLens] translation error', err);
+      const message = err instanceof Error ? err.message : String(err);
+      console.error('[SubtitleLens] translation error', message);
+      this.overlay?.showError(message);
+      if (!this.inErrorState) {
+        this.inErrorState = true;
+        const status: TranslationStatus = { error: message, at: Date.now() };
+        void chrome.storage.local.set({ [STATUS_KEY]: status });
+      }
     }
   }, 120);
 
@@ -114,7 +134,7 @@ class SubtitleLens {
   }
 
   private listenForSettingsChanges(): void {
-    chrome.runtime.onMessage.addListener((message: RuntimeMessage, _sender, sendResponse) => {
+    chrome.runtime.onMessage.addListener((message: ContentMessage, _sender, sendResponse) => {
       if (message.type === 'SETTINGS_UPDATED') {
         const prev = this.settings;
         this.settings = message.settings;

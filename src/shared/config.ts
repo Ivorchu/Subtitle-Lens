@@ -5,6 +5,8 @@ export const DEFAULT_SETTINGS: ExtensionSettings = {
   targetLanguage: 'en',
   fontSize: 20,
   verticalPosition: 10,
+  provider: 'mymemory',
+  deeplApiKey: '',
 };
 
 export const SUPPORTED_LANGUAGES = [
@@ -21,3 +23,15 @@ export const SUPPORTED_LANGUAGES = [
 ] as const;
 
 export const STORAGE_KEY = 'subtitleLensSettings';
+
+/** chrome.storage.local key for the last translation error — read by the popup. */
+export const STATUS_KEY = 'subtitleLensStatus';
+
+/** URL patterns for all supported streaming sites — kept in sync with manifest.json. */
+export const STREAMING_URL_PATTERNS = [
+  'https://www.youtube.com/*',
+  'https://www.netflix.com/*',
+  'https://www.disneyplus.com/*',
+  'https://www.amazon.com/*',
+  'https://www.primevideo.com/*',
+];
