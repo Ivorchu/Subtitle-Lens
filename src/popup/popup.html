@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="popup.css" />
+  <title>Subtitle Lens</title>
+</head>
+<body>
+  <div class="popup">
+    <header class="popup-header">
+      <div class="logo">SL</div>
+      <h1>Subtitle Lens</h1>
+    </header>
+
+    <div class="control">
+      <label for="enabled">Enabled</label>
+      <label class="toggle" aria-label="Enable subtitle translation">
+        <input type="checkbox" id="enabled" />
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <div class="control">
+      <label for="targetLang">Target Language</label>
+      <select id="targetLang"></select>
+    </div>
+
+    <div class="control control--column">
+      <div class="control-row">
+        <label for="fontSize">Font Size</label>
+        <span class="value-badge" id="fontSizeVal">20px</span>
+      </div>
+      <input type="range" id="fontSize" min="12" max="40" step="1" />
+    </div>
+
+    <div class="control control--column">
+      <div class="control-row">
+        <label for="verticalPosition">Vertical Position</label>
+        <span class="value-badge" id="vertPosVal">10%</span>
+      </div>
+      <input type="range" id="verticalPosition" min="2" max="40" step="1" />
+    </div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>
