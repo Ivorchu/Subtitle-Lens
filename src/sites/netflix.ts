@@ -19,7 +19,7 @@ export class NetflixAdapter implements SiteAdapter {
   }
 
   extractSubtitleText(container: Element): string {
-    return Array.from(container.querySelectorAll('.player-timedtext-text-container span'))
+    return Array.from(container.querySelectorAll('.player-timedtext-text-container'))
       .map(el => el.textContent ?? '')
       .join(' ')
       .trim();
