@@ -59,6 +59,23 @@
       </div>
       <input type="range" id="verticalPosition" min="2" max="40" step="1" />
     </div>
+
+    <div class="control control--column">
+      <div class="control-row">
+        <label for="bgOpacity">Background Opacity</label>
+        <span class="value-badge" id="bgOpacityVal">75%</span>
+      </div>
+      <input type="range" id="bgOpacity" min="0" max="100" step="5" />
+    </div>
+
+    <div class="control">
+      <label for="textShadow">Text Shadow</label>
+      <label class="toggle" aria-label="Enable text shadow">
+        <input type="checkbox" id="textShadow" />
+        <span class="slider"></span>
+      </label>
+    </div>
+
     <div class="status-row" id="statusRow" hidden>
       <div class="status-icon">!</div>
       <p class="status-msg" id="statusMsg"></p>

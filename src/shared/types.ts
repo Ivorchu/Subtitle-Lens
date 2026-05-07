@@ -6,6 +6,8 @@ export interface ExtensionSettings {
   targetLanguage: string;
   fontSize: number;
   verticalPosition: number;
+  bgOpacity: number;        // 0–100, maps to rgba alpha
+  textShadow: boolean;
   provider: TranslationProvider;
   deeplApiKey: string;
 }

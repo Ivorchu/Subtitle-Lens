@@ -6,6 +6,8 @@ export const DEFAULT_SETTINGS: ExtensionSettings = {
   targetLanguage: 'en',
   fontSize: 20,
   verticalPosition: 10,
+  bgOpacity: 75,
+  textShadow: false,
   provider: 'mymemory',
   deeplApiKey: '',
 };

@@ -9,8 +9,11 @@ const deeplKeyEl = document.getElementById('deeplApiKey') as HTMLInputElement;
 const deeplKeyRow = document.getElementById('deeplKeyRow') as HTMLElement;
 const fontSizeEl = document.getElementById('fontSize') as HTMLInputElement;
 const vertPosEl = document.getElementById('verticalPosition') as HTMLInputElement;
+const bgOpacityEl = document.getElementById('bgOpacity') as HTMLInputElement;
+const textShadowEl = document.getElementById('textShadow') as HTMLInputElement;
 const fontSizeValEl = document.getElementById('fontSizeVal') as HTMLElement;
 const vertPosValEl = document.getElementById('vertPosVal') as HTMLElement;
+const bgOpacityValEl = document.getElementById('bgOpacityVal') as HTMLElement;
 const statusRow = document.getElementById('statusRow') as HTMLElement;
 const statusMsg = document.getElementById('statusMsg') as HTMLElement;
 
@@ -45,6 +48,8 @@ function buildSettings(): ExtensionSettings {
     deeplApiKey: deeplKeyEl.value.trim(),
     fontSize: parseInt(fontSizeEl.value, 10),
     verticalPosition: parseInt(vertPosEl.value, 10),
+    bgOpacity: parseInt(bgOpacityEl.value, 10),
+    textShadow: textShadowEl.checked,
   };
 }
 
@@ -56,8 +61,11 @@ function applyToForm(settings: ExtensionSettings): void {
   deeplKeyEl.value = settings.deeplApiKey;
   fontSizeEl.value = String(settings.fontSize);
   vertPosEl.value = String(settings.verticalPosition);
+  bgOpacityEl.value = String(settings.bgOpacity);
+  textShadowEl.checked = settings.textShadow;
   fontSizeValEl.textContent = `${settings.fontSize}px`;
   vertPosValEl.textContent = `${settings.verticalPosition}%`;
+  bgOpacityValEl.textContent = `${settings.bgOpacity}%`;
   syncDeepLVisibility();
 }
 
@@ -85,6 +93,13 @@ vertPosEl.addEventListener('input', () => {
   vertPosValEl.textContent = `${vertPosEl.value}%`;
   save();
 });
+
+bgOpacityEl.addEventListener('input', () => {
+  bgOpacityValEl.textContent = `${bgOpacityEl.value}%`;
+  save();
+});
+
+textShadowEl.addEventListener('change', save);
 
 // --- Error status panel ---
 const ERROR_TTL_MS = 60_000;

@@ -15,9 +15,10 @@ export class SubtitleOverlay {
     if (!text) return;
 
     const span = document.createElement('span');
-    span.style.cssText = [
+    const alpha = (settings.bgOpacity / 100).toFixed(2);
+    const styles = [
       'display:inline-block',
-      'background:rgba(0,0,0,0.75)',
+      `background:rgba(0,0,0,${alpha})`,
       'color:#fff',
       'padding:4px 12px',
       'border-radius:3px',
@@ -26,7 +27,9 @@ export class SubtitleOverlay {
       'line-height:1.5',
       'white-space:pre-wrap',
       'max-width:80%',
-    ].join(';');
+    ];
+    if (settings.textShadow) styles.push('text-shadow:0 1px 3px rgba(0,0,0,0.8)');
+    span.style.cssText = styles.join(';');
     span.textContent = text;
 
     this.container.appendChild(span);
@@ -70,7 +73,11 @@ export class SubtitleOverlay {
 
   updateSettings(settings: ExtensionSettings): void {
     const span = this.container.querySelector<HTMLElement>('span');
-    if (span) span.style.fontSize = `${settings.fontSize}px`;
+    if (span) {
+      span.style.fontSize = `${settings.fontSize}px`;
+      span.style.background = `rgba(0,0,0,${(settings.bgOpacity / 100).toFixed(2)})`;
+      span.style.textShadow = settings.textShadow ? '0 1px 3px rgba(0,0,0,0.8)' : '';
+    }
     this.container.style.bottom = `${settings.verticalPosition}%`;
   }
 
