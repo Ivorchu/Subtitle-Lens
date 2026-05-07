@@ -48,10 +48,16 @@ function classifyError(err: unknown, provider: 'mymemory' | 'deepl'): string {
   return `Translation failed: ${msg.slice(0, 120)}`;
 }
 
-async function translateMyMemory(text: string, targetLang: string): Promise<string> {
-  const url =
-    `https://api.mymemory.translated.net/get` +
-    `?q=${encodeURIComponent(text)}&langpair=auto|${encodeURIComponent(targetLang)}`;
+async function translateMyMemory(
+  text: string,
+  sourceLang: string,
+  targetLang: string,
+): Promise<string> {
+  const pair = sourceLang === 'auto'
+    ? `auto|${encodeURIComponent(targetLang)}`
+    : `${encodeURIComponent(sourceLang)}|${encodeURIComponent(targetLang)}`;
+
+  const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${pair}`;
 
   const resp = await fetch(url);
   if (!resp.ok) throw new Error(`MyMemory HTTP ${resp.status}`);
@@ -67,8 +73,21 @@ async function translateMyMemory(text: string, targetLang: string): Promise<stri
   return data.responseData.translatedText;
 }
 
-async function translateDeepL(text: string, targetLang: string, apiKey: string): Promise<string> {
+async function translateDeepL(
+  text: string,
+  sourceLang: string,
+  targetLang: string,
+  apiKey: string,
+): Promise<string> {
   if (!apiKey) throw new Error('API key is not set. Add it in the extension popup.');
+
+  const params: Record<string, string> = {
+    text,
+    target_lang: toDeepLLang(targetLang),
+  };
+  if (sourceLang !== 'auto') {
+    params.source_lang = toDeepLLang(sourceLang);
+  }
 
   const resp = await fetch('https://api-free.deepl.com/v2/translate', {
     method: 'POST',
@@ -76,7 +95,7 @@ async function translateDeepL(text: string, targetLang: string, apiKey: string):
       'Content-Type': 'application/x-www-form-urlencoded',
       'Authorization': `DeepL-Auth-Key ${apiKey}`,
     },
-    body: new URLSearchParams({ text, target_lang: toDeepLLang(targetLang) }),
+    body: new URLSearchParams(params),
   });
 
   if (!resp.ok) {
@@ -115,17 +134,26 @@ chrome.storage.onChanged.addListener((changes, area) => {
   });
 });
 
+// Keyboard shortcut: Alt+S toggles the extension on/off.
+chrome.commands.onCommand.addListener(command => {
+  if (command !== 'toggle') return;
+  chrome.storage.sync.get(STORAGE_KEY, result => {
+    const current = { ...DEFAULT_SETTINGS, ...(result[STORAGE_KEY] as Partial<ExtensionSettings> ?? {}) };
+    chrome.storage.sync.set({ [STORAGE_KEY]: { ...current, enabled: !current.enabled } });
+  });
+});
+
 // Proxy translation requests from content scripts (avoids CORS from page context).
 chrome.runtime.onMessage.addListener(
   (message: TranslateRequest, _sender, sendResponse) => {
     if (message.type !== 'TRANSLATE') return;
 
-    const { text, targetLang, provider, deeplApiKey } = message;
+    const { text, sourceLang, targetLang, provider, deeplApiKey } = message;
 
     const work =
       provider === 'deepl'
-        ? translateDeepL(text, targetLang, deeplApiKey)
-        : translateMyMemory(text, targetLang);
+        ? translateDeepL(text, sourceLang, targetLang, deeplApiKey)
+        : translateMyMemory(text, sourceLang, targetLang);
 
     work
       .then(result => sendResponse({ ok: true, result } satisfies TranslateResponse))

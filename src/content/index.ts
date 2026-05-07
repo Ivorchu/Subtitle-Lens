@@ -28,6 +28,7 @@ class SubtitleLens {
   private inErrorState = false;
   private isSetup = false;
   private pollTimer: ReturnType<typeof setTimeout> | null = null;
+  private currentUrl = window.location.href;
 
   private readonly handleSubtitleChange = debounce(async (text: string) => {
     try {
@@ -64,14 +65,48 @@ class SubtitleLens {
 
     await this.loadSettings();
     this.listenForSettingsChanges();
+    this.setupNavigationListeners();
     this.waitForElements();
-
-    // YouTube fires this event on SPA navigation between videos.
-    document.addEventListener('yt-navigate-finish', () => {
-      this.adapter = ADAPTERS.find(a => a.matches(window.location.href)) ?? null;
-      if (this.adapter) this.restart();
-    });
   }
+
+  // ── Navigation ──────────────────────────────────────────────────────────────
+
+  private setupNavigationListeners(): void {
+    // YouTube fires a custom event after its SPA transition completes.
+    document.addEventListener('yt-navigate-finish', () => this.handleNavigation());
+
+    // All other streaming SPAs use the History API. Patch pushState/replaceState
+    // so we can detect programmatic URL changes (back/forward is handled by popstate).
+    const dispatch = () => window.dispatchEvent(new Event('subtitle-lens:navigate'));
+
+    const origPush = history.pushState.bind(history);
+    history.pushState = (...args: Parameters<typeof history.pushState>) => {
+      origPush(...args);
+      dispatch();
+    };
+
+    const origReplace = history.replaceState.bind(history);
+    history.replaceState = (...args: Parameters<typeof history.replaceState>) => {
+      origReplace(...args);
+      dispatch();
+    };
+
+    window.addEventListener('popstate', () => this.handleNavigation());
+    window.addEventListener('subtitle-lens:navigate', () => this.handleNavigation());
+  }
+
+  private handleNavigation(): void {
+    const newUrl = window.location.href;
+    if (newUrl === this.currentUrl) return;
+    this.currentUrl = newUrl;
+
+    const matched = ADAPTERS.find(a => a.matches(newUrl)) ?? null;
+    if (!matched) return;
+    this.adapter = matched;
+    this.restart();
+  }
+
+  // ── Lifecycle ────────────────────────────────────────────────────────────────
 
   private restart(): void {
     this.subtitleObserver?.disconnect();
@@ -79,6 +114,7 @@ class SubtitleLens {
     this.overlay?.destroy();
     this.overlay = null;
     this.lastRawText = '';
+    this.inErrorState = false;
     this.isSetup = false;
     if (this.pollTimer !== null) {
       clearTimeout(this.pollTimer);
@@ -123,6 +159,8 @@ class SubtitleLens {
       characterData: true,
     });
   }
+
+  // ── Settings ─────────────────────────────────────────────────────────────────
 
   private async loadSettings(): Promise<void> {
     return new Promise(resolve => {

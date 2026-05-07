@@ -2,6 +2,7 @@ export type TranslationProvider = 'mymemory' | 'deepl';
 
 export interface ExtensionSettings {
   enabled: boolean;
+  sourceLanguage: string;   // 'auto' or a BCP-47 code
   targetLanguage: string;
   fontSize: number;
   verticalPosition: number;
@@ -21,6 +22,7 @@ export type ContentMessage = { type: 'SETTINGS_UPDATED'; settings: ExtensionSett
 export type TranslateRequest = {
   type: 'TRANSLATE';
   text: string;
+  sourceLang: string;
   targetLang: string;
   provider: TranslationProvider;
   deeplApiKey: string;

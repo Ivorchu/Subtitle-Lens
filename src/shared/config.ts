@@ -2,6 +2,7 @@ import type { ExtensionSettings } from './types';
 
 export const DEFAULT_SETTINGS: ExtensionSettings = {
   enabled: true,
+  sourceLanguage: 'auto',
   targetLanguage: 'en',
   fontSize: 20,
   verticalPosition: 10,
