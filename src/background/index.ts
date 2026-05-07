@@ -18,6 +18,7 @@ function toMyMemoryLang(code: string): string {
 // DeepL uses uppercase lang codes; a few need explicit mapping.
 const DEEPL_LANG_MAP: Record<string, string> = {
   zh: 'ZH',
+  'zh-TW': 'ZH-HANT',
   pt: 'PT-BR',
 };
 function toDeepLLang(code: string): string {
@@ -61,12 +62,14 @@ async function translateMyMemory(
   text: string,
   sourceLang: string,
   targetLang: string,
+  email: string,
 ): Promise<string> {
   const src = sourceLang === 'auto' ? 'auto' : toMyMemoryLang(sourceLang);
   const tgt = toMyMemoryLang(targetLang);
   const pair = `${encodeURIComponent(src)}|${encodeURIComponent(tgt)}`;
+  const emailParam = email ? `&de=${encodeURIComponent(email)}` : '';
 
-  const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${pair}`;
+  const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${pair}${emailParam}`;
 
   const resp = await fetch(url);
   if (!resp.ok) throw new Error(`MyMemory HTTP ${resp.status}`);
@@ -160,12 +163,12 @@ chrome.runtime.onConnect.addListener(port => {
   port.onMessage.addListener((message: TranslateRequest) => {
     if (message.type !== 'TRANSLATE') return;
 
-    const { text, sourceLang, targetLang, provider, deeplApiKey } = message;
+    const { text, sourceLang, targetLang, provider, deeplApiKey, myMemoryEmail } = message;
 
     const work =
       provider === 'deepl'
         ? translateDeepL(text, sourceLang, targetLang, deeplApiKey)
-        : translateMyMemory(text, sourceLang, targetLang);
+        : translateMyMemory(text, sourceLang, targetLang, myMemoryEmail);
 
     work
       .then(result => port.postMessage({ ok: true, result } satisfies TranslateResponse))

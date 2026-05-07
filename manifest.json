@@ -18,7 +18,10 @@
         "https://www.netflix.com/*",
         "https://www.disneyplus.com/*",
         "https://www.amazon.com/*",
-        "https://www.primevideo.com/*"
+        "https://www.primevideo.com/*",
+        "https://www.crunchyroll.com/*",
+        "https://play.max.com/*",
+        "https://www.max.com/*"
       ],
       "js": ["content.js"],
       "run_at": "document_idle"

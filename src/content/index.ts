@@ -2,6 +2,8 @@ import { YouTubeAdapter } from '../sites/youtube';
 import { NetflixAdapter } from '../sites/netflix';
 import { DisneyAdapter } from '../sites/disney';
 import { PrimeVideoAdapter } from '../sites/primevideo';
+import { CrunchyrollAdapter } from '../sites/crunchyroll';
+import { MaxAdapter } from '../sites/max';
 import { SubtitleOverlay } from './overlay';
 import { TranslationCache } from '../shared/cache';
 import { Translator } from '../shared/translator';
@@ -15,6 +17,8 @@ const ADAPTERS: SiteAdapter[] = [
   new NetflixAdapter(),
   new DisneyAdapter(),
   new PrimeVideoAdapter(),
+  new CrunchyrollAdapter(),
+  new MaxAdapter(),
 ];
 
 class SubtitleLens {

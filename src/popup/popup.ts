@@ -7,6 +7,8 @@ const targetLangEl = document.getElementById('targetLang') as HTMLSelectElement;
 const providerEl = document.getElementById('provider') as HTMLSelectElement;
 const deeplKeyEl = document.getElementById('deeplApiKey') as HTMLInputElement;
 const deeplKeyRow = document.getElementById('deeplKeyRow') as HTMLElement;
+const myMemoryEmailEl = document.getElementById('myMemoryEmail') as HTMLInputElement;
+const myMemoryEmailRow = document.getElementById('myMemoryEmailRow') as HTMLElement;
 const fontSizeEl = document.getElementById('fontSize') as HTMLInputElement;
 const vertPosEl = document.getElementById('verticalPosition') as HTMLInputElement;
 const bgOpacityEl = document.getElementById('bgOpacity') as HTMLInputElement;
@@ -35,8 +37,9 @@ for (const lang of SUPPORTED_LANGUAGES) {
   targetLangEl.appendChild(tgt);
 }
 
-function syncDeepLVisibility(): void {
+function syncProviderVisibility(): void {
   deeplKeyRow.hidden = providerEl.value !== 'deepl';
+  myMemoryEmailRow.hidden = providerEl.value !== 'mymemory';
 }
 
 function buildSettings(): ExtensionSettings {
@@ -46,6 +49,7 @@ function buildSettings(): ExtensionSettings {
     targetLanguage: targetLangEl.value,
     provider: providerEl.value as TranslationProvider,
     deeplApiKey: deeplKeyEl.value.trim(),
+    myMemoryEmail: myMemoryEmailEl.value.trim(),
     fontSize: parseInt(fontSizeEl.value, 10),
     verticalPosition: parseInt(vertPosEl.value, 10),
     bgOpacity: parseInt(bgOpacityEl.value, 10),
@@ -59,6 +63,7 @@ function applyToForm(settings: ExtensionSettings): void {
   targetLangEl.value = settings.targetLanguage;
   providerEl.value = settings.provider;
   deeplKeyEl.value = settings.deeplApiKey;
+  myMemoryEmailEl.value = settings.myMemoryEmail;
   fontSizeEl.value = String(settings.fontSize);
   vertPosEl.value = String(settings.verticalPosition);
   bgOpacityEl.value = String(settings.bgOpacity);
@@ -66,7 +71,7 @@ function applyToForm(settings: ExtensionSettings): void {
   fontSizeValEl.textContent = `${settings.fontSize}px`;
   vertPosValEl.textContent = `${settings.verticalPosition}%`;
   bgOpacityValEl.textContent = `${settings.bgOpacity}%`;
-  syncDeepLVisibility();
+  syncProviderVisibility();
 }
 
 function save(): void {
@@ -81,8 +86,9 @@ chrome.storage.sync.get(STORAGE_KEY, result => {
 enabledEl.addEventListener('change', save);
 sourceLangEl.addEventListener('change', save);
 targetLangEl.addEventListener('change', save);
-providerEl.addEventListener('change', () => { syncDeepLVisibility(); save(); });
+providerEl.addEventListener('change', () => { syncProviderVisibility(); save(); });
 deeplKeyEl.addEventListener('change', save);
+myMemoryEmailEl.addEventListener('change', save);
 
 fontSizeEl.addEventListener('input', () => {
   fontSizeValEl.textContent = `${fontSizeEl.value}px`;

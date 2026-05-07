@@ -10,6 +10,7 @@ export interface ExtensionSettings {
   textShadow: boolean;
   provider: TranslationProvider;
   deeplApiKey: string;
+  myMemoryEmail: string;
 }
 
 export interface TranslationStatus {
@@ -28,6 +29,7 @@ export type TranslateRequest = {
   targetLang: string;
   provider: TranslationProvider;
   deeplApiKey: string;
+  myMemoryEmail: string;
 };
 
 export type TranslateResponse =

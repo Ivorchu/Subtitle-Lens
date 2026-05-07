@@ -18,6 +18,7 @@ export class Translator {
       targetLang: targetLanguage,
       provider,
       deeplApiKey,
+      myMemoryEmail: settings.myMemoryEmail,
     };
 
     // Use a port so the service worker stays alive for the duration of the fetch.

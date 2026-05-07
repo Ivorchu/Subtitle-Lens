@@ -1,30 +1,34 @@
 import type { SiteAdapter } from './adapter';
 
-export class DisneyAdapter implements SiteAdapter {
-  readonly name = 'Disney+';
+export class CrunchyrollAdapter implements SiteAdapter {
+  readonly name = 'Crunchyroll';
 
   private styleEl: HTMLStyleElement | null = null;
   private overlayEl: HTMLElement | null = null;
 
   matches(url: string): boolean {
-    return url.includes('disneyplus.com/video') ||
-      url.includes('disneyplus.com/play');
+    return url.includes('crunchyroll.com/watch');
   }
 
   findVideoElement(): HTMLVideoElement | null {
-    return document.querySelector<HTMLVideoElement>('video.hive-video') ??
-      document.querySelector<HTMLVideoElement>('video.btm-media-client-element') ??
-      document.querySelector<HTMLVideoElement>('video.clpp-video') ??
-      document.querySelector<HTMLVideoElement>('video');
+    return document.querySelector<HTMLVideoElement>('video');
   }
 
   findSubtitleContainer(): Element | null {
-    return document.querySelector('.TimedTextOverlay') ??
-      document.querySelector('.clpp-subtitles-wrapper') ??
-      document.querySelector('.clpp-subtitles');
+    return (
+      document.querySelector('.player-subtitle-overlay') ??
+      document.querySelector('.subtitle-container') ??
+      document.querySelector('.vilos-player .subtitle')
+    );
   }
 
   extractSubtitleText(container: Element): string {
+    const leaves = Array.from(container.querySelectorAll('p, span')).filter(
+      el => el.children.length === 0 && (el.textContent ?? '').trim(),
+    );
+    if (leaves.length > 0) {
+      return leaves.map(el => el.textContent ?? '').join(' ').trim();
+    }
     return (container.textContent ?? '').trim();
   }
 
@@ -33,9 +37,9 @@ export class DisneyAdapter implements SiteAdapter {
     const style = document.createElement('style');
     style.id = 'subtitle-lens-hide';
     style.textContent = `
-      .TimedTextOverlay,
-      .clpp-subtitles-wrapper,
-      .clpp-subtitles {
+      .player-subtitle-overlay,
+      .subtitle-container,
+      .vilos-player .subtitle {
         opacity: 0 !important;
         pointer-events: none !important;
       }
@@ -65,12 +69,9 @@ export class DisneyAdapter implements SiteAdapter {
       'z-index:10000',
     ].join(';');
 
-    // Attach to the same parent as TimedTextOverlay — that element is already positioned.
-    const timedText = document.querySelector('.TimedTextOverlay');
     const player =
-      timedText?.parentElement ??
-      video.closest('.btm-media-client') ??
-      video.closest('.clpp-container') ??
+      video.closest('.player-container') ??
+      video.closest('[class*="player"]') ??
       video.parentElement;
     player?.appendChild(overlay);
     this.overlayEl = overlay;

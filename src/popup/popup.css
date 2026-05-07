@@ -76,6 +76,11 @@ label {
   font-size: 13px;
 }
 
+.hint {
+  color: #6a6a88;
+  font-size: 11px;
+}
+
 .value-badge {
   font-size: 12px;
   font-weight: 600;

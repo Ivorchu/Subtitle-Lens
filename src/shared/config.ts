@@ -10,6 +10,7 @@ export const DEFAULT_SETTINGS: ExtensionSettings = {
   textShadow: false,
   provider: 'mymemory',
   deeplApiKey: '',
+  myMemoryEmail: '',
 };
 
 export const SUPPORTED_LANGUAGES = [
@@ -20,6 +21,7 @@ export const SUPPORTED_LANGUAGES = [
   { code: 'ja', name: 'Japanese' },
   { code: 'ko', name: 'Korean' },
   { code: 'zh', name: 'Chinese (Simplified)' },
+  { code: 'zh-TW', name: 'Chinese (Traditional)' },
   { code: 'pt', name: 'Portuguese' },
   { code: 'it', name: 'Italian' },
   { code: 'ru', name: 'Russian' },
@@ -37,4 +39,7 @@ export const STREAMING_URL_PATTERNS = [
   'https://www.disneyplus.com/*',
   'https://www.amazon.com/*',
   'https://www.primevideo.com/*',
+  'https://www.crunchyroll.com/*',
+  'https://play.max.com/*',
+  'https://www.max.com/*',
 ];
