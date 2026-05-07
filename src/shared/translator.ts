@@ -20,13 +20,17 @@ export class Translator {
       deeplApiKey,
     };
 
+    // Use a port so the service worker stays alive for the duration of the fetch.
     const response = await new Promise<TranslateResponse>((resolve, reject) => {
-      chrome.runtime.sendMessage(request, (resp: TranslateResponse) => {
-        if (chrome.runtime.lastError) {
-          reject(new Error(chrome.runtime.lastError.message));
-        } else {
-          resolve(resp);
-        }
+      const port = chrome.runtime.connect({ name: 'translate' });
+      port.postMessage(request);
+      port.onMessage.addListener((resp: TranslateResponse) => {
+        port.disconnect();
+        resolve(resp);
+      });
+      port.onDisconnect.addListener(() => {
+        const err = chrome.runtime.lastError;
+        if (err) reject(new Error(err.message));
       });
     });
 

@@ -6,6 +6,15 @@ import type {
   TranslateResponse,
 } from '../shared/types';
 
+// MyMemory uses locale codes for some languages.
+const MYMEMORY_LANG_MAP: Record<string, string> = {
+  zh: 'zh-CN',
+  pt: 'pt-BR',
+};
+function toMyMemoryLang(code: string): string {
+  return MYMEMORY_LANG_MAP[code] ?? code;
+}
+
 // DeepL uses uppercase lang codes; a few need explicit mapping.
 const DEEPL_LANG_MAP: Record<string, string> = {
   zh: 'ZH',
@@ -53,9 +62,9 @@ async function translateMyMemory(
   sourceLang: string,
   targetLang: string,
 ): Promise<string> {
-  const pair = sourceLang === 'auto'
-    ? `auto|${encodeURIComponent(targetLang)}`
-    : `${encodeURIComponent(sourceLang)}|${encodeURIComponent(targetLang)}`;
+  const src = sourceLang === 'auto' ? 'auto' : toMyMemoryLang(sourceLang);
+  const tgt = toMyMemoryLang(targetLang);
+  const pair = `${encodeURIComponent(src)}|${encodeURIComponent(tgt)}`;
 
   const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${pair}`;
 
@@ -143,9 +152,12 @@ chrome.commands.onCommand.addListener(command => {
   });
 });
 
-// Proxy translation requests from content scripts (avoids CORS from page context).
-chrome.runtime.onMessage.addListener(
-  (message: TranslateRequest, _sender, sendResponse) => {
+// Proxy translation requests via a long-lived port so the service worker
+// stays alive for the duration of the fetch (avoids MV3 message-channel-closed errors).
+chrome.runtime.onConnect.addListener(port => {
+  if (port.name !== 'translate') return;
+
+  port.onMessage.addListener((message: TranslateRequest) => {
     if (message.type !== 'TRANSLATE') return;
 
     const { text, sourceLang, targetLang, provider, deeplApiKey } = message;
@@ -156,14 +168,12 @@ chrome.runtime.onMessage.addListener(
         : translateMyMemory(text, sourceLang, targetLang);
 
     work
-      .then(result => sendResponse({ ok: true, result } satisfies TranslateResponse))
+      .then(result => port.postMessage({ ok: true, result } satisfies TranslateResponse))
       .catch(err =>
-        sendResponse({
+        port.postMessage({
           ok: false,
           error: classifyError(err, provider),
         } satisfies TranslateResponse),
       );
-
-    return true; // keep channel open for async sendResponse
-  },
-);
+  });
+});

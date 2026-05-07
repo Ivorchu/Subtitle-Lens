@@ -11,7 +11,10 @@ export class YouTubeAdapter implements SiteAdapter {
   }
 
   findVideoElement(): HTMLVideoElement | null {
-    return document.querySelector<HTMLVideoElement>('video.html5-main-video');
+    return (
+      document.querySelector<HTMLVideoElement>('video.html5-main-video') ??
+      document.querySelector<HTMLVideoElement>('.html5-video-player video')
+    );
   }
 
   findSubtitleContainer(): Element | null {
