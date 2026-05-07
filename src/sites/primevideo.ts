@@ -24,7 +24,7 @@ export class PrimeVideoAdapter implements SiteAdapter {
   extractSubtitleText(container: Element): string {
     // Prime Video renders text as individual styled spans
     return Array.from(
-      container.querySelectorAll('.atvwebplayersdk-timedtext-text, .timedTextAttributedString'),
+      container.querySelectorAll('.atvwebplayersdk-captions-text, .atvwebplayersdk-timedtext-text, .timedTextAttributedString'),
     )
       .map(el => el.textContent ?? '')
       .join(' ')
@@ -67,7 +67,9 @@ export class PrimeVideoAdapter implements SiteAdapter {
       'z-index:10000',
     ].join(';');
 
+    const captionsOverlay = document.querySelector('.atvwebplayersdk-captions-overlay');
     const player =
+      captionsOverlay?.parentElement ??
       video.closest('#dv-web-player') ??
       video.closest('.atvwebplayersdk-overlays-container') ??
       video.parentElement;
