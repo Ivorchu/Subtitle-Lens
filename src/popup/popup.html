@@ -31,24 +31,6 @@
       <select id="targetLang"></select>
     </div>
 
-    <div class="control">
-      <label for="provider">Provider</label>
-      <select id="provider">
-        <option value="mymemory">MyMemory (Free)</option>
-        <option value="deepl">DeepL</option>
-      </select>
-    </div>
-
-    <div class="control control--column" id="myMemoryEmailRow">
-      <label for="myMemoryEmail">MyMemory Email <span class="hint">(optional — raises limit to 10k words/day)</span></label>
-      <input type="email" id="myMemoryEmail" placeholder="your@email.com" autocomplete="off" />
-    </div>
-
-    <div class="control control--column" id="deeplKeyRow" hidden>
-      <label for="deeplApiKey">DeepL API Key</label>
-      <input type="password" id="deeplApiKey" placeholder="Paste your DeepL Free API key…" autocomplete="off" />
-    </div>
-
     <div class="control control--column">
       <div class="control-row">
         <label for="fontSize">Font Size</label>
@@ -81,7 +63,7 @@
       </label>
     </div>
 
-    <div class="status-row" id="statusRow" hidden>
+<div class="status-row" id="statusRow" hidden>
       <div class="status-icon">!</div>
       <p class="status-msg" id="statusMsg"></p>
     </div>

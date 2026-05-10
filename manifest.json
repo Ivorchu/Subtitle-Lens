@@ -5,8 +5,7 @@
   "description": "Automatically translate subtitles on streaming websites",
   "permissions": ["storage", "tabs"],
   "host_permissions": [
-    "https://api.mymemory.translated.net/*",
-    "https://api-free.deepl.com/*"
+    "https://api.mymemory.translated.net/*"
   ],
   "background": {
     "service_worker": "background.js"

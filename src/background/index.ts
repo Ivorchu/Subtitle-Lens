@@ -1,7 +1,8 @@
-import { DEFAULT_SETTINGS, STORAGE_KEY, STREAMING_URL_PATTERNS } from '../shared/config';
+import { DAILY_WORD_LIMIT, DEFAULT_SETTINGS, STORAGE_KEY, STREAMING_URL_PATTERNS, USAGE_KEY } from '../shared/config';
 import type {
   ExtensionSettings,
   ContentMessage,
+  DailyUsage,
   TranslateRequest,
   TranslateResponse,
 } from '../shared/types';
@@ -15,37 +16,16 @@ function toMyMemoryLang(code: string): string {
   return MYMEMORY_LANG_MAP[code] ?? code;
 }
 
-// DeepL uses uppercase lang codes; a few need explicit mapping.
-const DEEPL_LANG_MAP: Record<string, string> = {
-  zh: 'ZH',
-  'zh-TW': 'ZH-HANT',
-  pt: 'PT-BR',
-};
-function toDeepLLang(code: string): string {
-  return DEEPL_LANG_MAP[code] ?? code.toUpperCase();
-}
-
-function classifyError(err: unknown, provider: 'mymemory' | 'deepl'): string {
+function classifyError(err: unknown): string {
   const msg = String(err);
+  const upper = msg.toUpperCase();
 
-  if (provider === 'deepl') {
-    if (msg.includes('API key is not set')) return 'DeepL API key not configured — add it in the popup';
-    if (msg.includes('403'))               return 'Invalid DeepL API key — check the key in the popup';
-    if (msg.includes('456'))               return 'DeepL monthly character quota exceeded';
-    if (msg.includes('429'))               return 'DeepL rate limit hit — too many requests';
-    if (msg.includes('400'))               return 'DeepL rejected the request (unsupported language?)';
+  if (upper.includes('ALL AVAILABLE FREE') || msg.includes('429')) {
+    return 'MyMemory daily limit reached — try again tomorrow or add an email in the popup to raise the limit';
   }
-
-  if (provider === 'mymemory') {
-    const upper = msg.toUpperCase();
-    if (upper.includes('ALL AVAILABLE FREE') || msg.includes('429')) {
-      return 'MyMemory daily limit reached — try again tomorrow or switch to DeepL';
-    }
-    if (upper.includes('QUERY LENGTH')) {
-      return 'Subtitle too long for MyMemory free tier';
-    }
+  if (upper.includes('QUERY LENGTH')) {
+    return 'Subtitle too long for MyMemory free tier';
   }
-
   if (
     msg.includes('Failed to fetch') ||
     msg.includes('NetworkError') ||
@@ -85,45 +65,54 @@ async function translateMyMemory(
   return data.responseData.translatedText;
 }
 
-async function translateDeepL(
-  text: string,
-  sourceLang: string,
-  targetLang: string,
-  apiKey: string,
-): Promise<string> {
-  if (!apiKey) throw new Error('API key is not set. Add it in the extension popup.');
+function todayDate(): string {
+  return new Date().toISOString().slice(0, 10);
+}
 
-  const params: Record<string, string> = {
-    text,
-    target_lang: toDeepLLang(targetLang),
-  };
-  if (sourceLang !== 'auto') {
-    params.source_lang = toDeepLLang(sourceLang);
-  }
+function countWords(text: string): number {
+  return text.trim().split(/\s+/).filter(w => w.length > 0).length;
+}
 
-  const resp = await fetch('https://api-free.deepl.com/v2/translate', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      'Authorization': `DeepL-Auth-Key ${apiKey}`,
-    },
-    body: new URLSearchParams(params),
+function renewIdentifier(): void {
+  chrome.storage.sync.get(STORAGE_KEY, result => {
+    const settings = { ...DEFAULT_SETTINGS, ...(result[STORAGE_KEY] as Partial<ExtensionSettings> ?? {}) };
+    chrome.storage.sync.set({ [STORAGE_KEY]: { ...settings, myMemoryEmail: randomIdentifier() } });
   });
+}
 
-  if (!resp.ok) {
-    const body = await resp.text().catch(() => '');
-    throw new Error(`DeepL HTTP ${resp.status}: ${body}`);
-  }
+function recordUsage(words: number): void {
+  const today = todayDate();
+  chrome.storage.local.get(USAGE_KEY, result => {
+    const current = result[USAGE_KEY] as DailyUsage | undefined;
+    const usage: DailyUsage = current?.date === today
+      ? { date: today, words: current.words + words }
+      : { date: today, words };
+    chrome.storage.local.set({ [USAGE_KEY]: usage });
 
-  const data = await resp.json() as { translations: Array<{ text: string }> };
-  return data.translations[0].text;
+    const wasBelow = (current?.words ?? 0) < DAILY_WORD_LIMIT * 0.9;
+    const isNowAbove = usage.words >= DAILY_WORD_LIMIT * 0.9;
+    if (wasBelow && isNowAbove) renewIdentifier();
+  });
+}
+
+function randomIdentifier(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(18));
+  const hex = (start: number, len: number) =>
+    Array.from(bytes.slice(start, start + len))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+  const tlds = ['com', 'net', 'org', 'io', 'co'];
+  const tld = tlds[bytes[17] % tlds.length];
+  return `${hex(0, 8)}@${hex(8, 5)}.${tld}`;
 }
 
 // Initialise default settings on first install.
 chrome.runtime.onInstalled.addListener(() => {
   chrome.storage.sync.get(STORAGE_KEY, result => {
     if (!result[STORAGE_KEY]) {
-      chrome.storage.sync.set({ [STORAGE_KEY]: DEFAULT_SETTINGS });
+      chrome.storage.sync.set({
+        [STORAGE_KEY]: { ...DEFAULT_SETTINGS, myMemoryEmail: randomIdentifier() },
+      });
     }
   });
 });
@@ -163,19 +152,17 @@ chrome.runtime.onConnect.addListener(port => {
   port.onMessage.addListener((message: TranslateRequest) => {
     if (message.type !== 'TRANSLATE') return;
 
-    const { text, sourceLang, targetLang, provider, deeplApiKey, myMemoryEmail } = message;
+    const { text, sourceLang, targetLang, myMemoryEmail } = message;
 
-    const work =
-      provider === 'deepl'
-        ? translateDeepL(text, sourceLang, targetLang, deeplApiKey)
-        : translateMyMemory(text, sourceLang, targetLang, myMemoryEmail);
-
-    work
-      .then(result => port.postMessage({ ok: true, result } satisfies TranslateResponse))
+    translateMyMemory(text, sourceLang, targetLang, myMemoryEmail)
+      .then(result => {
+        recordUsage(countWords(text));
+        port.postMessage({ ok: true, result } satisfies TranslateResponse);
+      })
       .catch(err =>
         port.postMessage({
           ok: false,
-          error: classifyError(err, provider),
+          error: classifyError(err),
         } satisfies TranslateResponse),
       );
   });

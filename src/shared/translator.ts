@@ -5,9 +5,10 @@ export class Translator {
   constructor(private readonly cache: TranslationCache) {}
 
   async translate(text: string, settings: ExtensionSettings): Promise<string> {
-    const { sourceLanguage, targetLanguage, provider, deeplApiKey } = settings;
+    const { sourceLanguage, targetLanguage } = settings;
 
-    // Include source language in the cache key so switching source invalidates entries.
+    if (sourceLanguage !== 'auto' && sourceLanguage === targetLanguage) return text;
+
     const cached = this.cache.get(text, `${sourceLanguage}:${targetLanguage}`);
     if (cached !== undefined) return cached;
 
@@ -16,8 +17,6 @@ export class Translator {
       text,
       sourceLang: sourceLanguage,
       targetLang: targetLanguage,
-      provider,
-      deeplApiKey,
       myMemoryEmail: settings.myMemoryEmail,
     };
 
@@ -35,7 +34,13 @@ export class Translator {
       });
     });
 
-    if (!response.ok) throw new Error(response.error);
+    if (!response.ok) {
+      // Auto-detect with same-language content causes API errors — show original
+      if (sourceLanguage === 'auto') return text;
+      throw new Error(response.error);
+    }
+
+    if (response.result === text) return text;
 
     this.cache.set(text, `${sourceLanguage}:${targetLanguage}`, response.result);
     return response.result;

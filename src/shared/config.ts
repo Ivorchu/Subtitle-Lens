@@ -8,8 +8,6 @@ export const DEFAULT_SETTINGS: ExtensionSettings = {
   verticalPosition: 10,
   bgOpacity: 75,
   textShadow: false,
-  provider: 'mymemory',
-  deeplApiKey: '',
   myMemoryEmail: '',
 };
 
@@ -28,6 +26,12 @@ export const SUPPORTED_LANGUAGES = [
 ] as const;
 
 export const STORAGE_KEY = 'subtitleLensSettings';
+
+/** chrome.storage.local key for daily translation usage. */
+export const USAGE_KEY = 'subtitleLensUsage';
+
+/** MyMemory daily word limit when using an email identifier. */
+export const DAILY_WORD_LIMIT = 10_000;
 
 /** chrome.storage.local key for the last translation error — read by the popup. */
 export const STATUS_KEY = 'subtitleLensStatus';
