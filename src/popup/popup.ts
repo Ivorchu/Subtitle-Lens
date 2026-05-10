@@ -66,6 +66,12 @@ function save(): void {
   chrome.storage.sync.set({ [STORAGE_KEY]: buildSettings() });
 }
 
+let saveTimer: ReturnType<typeof setTimeout> | null = null;
+function saveLazy(): void {
+  if (saveTimer !== null) clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => { saveTimer = null; save(); }, 200);
+}
+
 // Load persisted settings on open
 chrome.storage.sync.get(STORAGE_KEY, result => {
   applyToForm({ ...DEFAULT_SETTINGS, ...(result[STORAGE_KEY] as Partial<ExtensionSettings> ?? {}) });
@@ -77,18 +83,21 @@ targetLangEl.addEventListener('change', save);
 
 fontSizeEl.addEventListener('input', () => {
   fontSizeValEl.textContent = `${fontSizeEl.value}px`;
-  save();
+  saveLazy();
 });
+fontSizeEl.addEventListener('change', save);
 
 vertPosEl.addEventListener('input', () => {
   vertPosValEl.textContent = `${vertPosEl.value}%`;
-  save();
+  saveLazy();
 });
+vertPosEl.addEventListener('change', save);
 
 bgOpacityEl.addEventListener('input', () => {
   bgOpacityValEl.textContent = `${bgOpacityEl.value}%`;
-  save();
+  saveLazy();
 });
+bgOpacityEl.addEventListener('change', save);
 
 textShadowEl.addEventListener('change', save);
 

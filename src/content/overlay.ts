@@ -28,7 +28,7 @@ export class SubtitleOverlay {
       'white-space:pre-wrap',
       'max-width:80%',
     ];
-    if (settings.textShadow) styles.push('text-shadow:0 1px 3px rgba(0,0,0,0.8)');
+    if (settings.textShadow) styles.push('text-shadow:0 1px 4px rgba(0,0,0,1),0 0 8px rgba(0,0,0,0.9)');
     span.style.cssText = styles.join(';');
     span.textContent = text;
 

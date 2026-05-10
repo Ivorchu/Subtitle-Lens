@@ -44,7 +44,7 @@ async function translateMyMemory(
   targetLang: string,
   email: string,
 ): Promise<string> {
-  const src = sourceLang === 'auto' ? 'auto' : toMyMemoryLang(sourceLang);
+  const src = sourceLang === 'auto' ? '' : toMyMemoryLang(sourceLang);
   const tgt = toMyMemoryLang(targetLang);
   const pair = `${encodeURIComponent(src)}|${encodeURIComponent(tgt)}`;
   const emailParam = email ? `&de=${encodeURIComponent(email)}` : '';
