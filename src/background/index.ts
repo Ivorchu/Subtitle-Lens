@@ -38,13 +38,20 @@ function classifyError(err: unknown): string {
   return `Translation failed: ${msg.slice(0, 120)}`;
 }
 
+async function detectSourceLanguage(text: string): Promise<string> {
+  const result = await new Promise<chrome.i18n.LanguageDetectionResult>(resolve => {
+    chrome.i18n.detectLanguage(text, resolve);
+  });
+  return result.languages[0]?.language ?? '';
+}
+
 async function translateMyMemory(
   text: string,
   sourceLang: string,
   targetLang: string,
   email: string,
 ): Promise<string> {
-  const src = sourceLang === 'auto' ? '' : toMyMemoryLang(sourceLang);
+  const src = toMyMemoryLang(sourceLang);
   const tgt = toMyMemoryLang(targetLang);
   const pair = `${encodeURIComponent(src)}|${encodeURIComponent(tgt)}`;
   const emailParam = email ? `&de=${encodeURIComponent(email)}` : '';
@@ -149,12 +156,32 @@ chrome.commands.onCommand.addListener(command => {
 chrome.runtime.onConnect.addListener(port => {
   if (port.name !== 'translate') return;
 
+  // Cache detected source language for the lifetime of this port (one video session).
+  // Resets automatically when the content script calls translator.resetSession() on navigation.
+  let sessionSourceLang = '';
+
   port.onMessage.addListener((message: TranslateRequest) => {
     if (message.type !== 'TRANSLATE') return;
 
     const { text, sourceLang, targetLang, myMemoryEmail } = message;
 
-    translateMyMemory(text, sourceLang, targetLang, myMemoryEmail)
+    const work = async () => {
+      let resolvedSource = sourceLang;
+      if (sourceLang === 'auto') {
+        if (!sessionSourceLang) {
+          sessionSourceLang = await detectSourceLanguage(text);
+        }
+        resolvedSource = sessionSourceLang;
+      }
+
+      if (resolvedSource && toMyMemoryLang(resolvedSource) === toMyMemoryLang(targetLang)) {
+        return text;
+      }
+
+      return translateMyMemory(text, resolvedSource, targetLang, myMemoryEmail);
+    };
+
+    work()
       .then(result => {
         recordUsage(countWords(text));
         port.postMessage({ ok: true, result } satisfies TranslateResponse);

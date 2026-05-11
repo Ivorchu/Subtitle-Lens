@@ -61,7 +61,7 @@ class SubtitleLens {
         void chrome.storage.local.set({ [STATUS_KEY]: status });
       }
     }
-  }, 120);
+  }, 50);
 
   async init(): Promise<void> {
     this.adapter = ADAPTERS.find(a => a.matches(window.location.href)) ?? null;
@@ -124,6 +124,7 @@ class SubtitleLens {
       clearTimeout(this.pollTimer);
       this.pollTimer = null;
     }
+    this.translator.resetSession();
     this.waitForElements();
   }
 

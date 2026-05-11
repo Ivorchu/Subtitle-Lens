@@ -2,7 +2,31 @@ import type { TranslationCache } from './cache';
 import type { ExtensionSettings, TranslateRequest, TranslateResponse } from './types';
 
 export class Translator {
+  private port: chrome.runtime.Port | null = null;
+  private pendingResolve: ((r: TranslateResponse) => void) | null = null;
+  private pendingReject: ((e: Error) => void) | null = null;
+
   constructor(private readonly cache: TranslationCache) {}
+
+  private getPort(): chrome.runtime.Port {
+    if (!this.port) {
+      this.port = chrome.runtime.connect({ name: 'translate' });
+      this.port.onMessage.addListener((resp: TranslateResponse) => {
+        const resolve = this.pendingResolve;
+        this.pendingResolve = null;
+        this.pendingReject = null;
+        resolve?.(resp);
+      });
+      this.port.onDisconnect.addListener(() => {
+        this.port = null;
+        const reject = this.pendingReject;
+        this.pendingResolve = null;
+        this.pendingReject = null;
+        reject?.(new Error(chrome.runtime.lastError?.message ?? 'Port disconnected'));
+      });
+    }
+    return this.port;
+  }
 
   async translate(text: string, settings: ExtensionSettings): Promise<string> {
     const { sourceLanguage, targetLanguage } = settings;
@@ -20,22 +44,19 @@ export class Translator {
       myMemoryEmail: settings.myMemoryEmail,
     };
 
-    // Use a port so the service worker stays alive for the duration of the fetch.
     const response = await new Promise<TranslateResponse>((resolve, reject) => {
-      const port = chrome.runtime.connect({ name: 'translate' });
-      port.postMessage(request);
-      port.onMessage.addListener((resp: TranslateResponse) => {
-        port.disconnect();
-        resolve(resp);
-      });
-      port.onDisconnect.addListener(() => {
-        const err = chrome.runtime.lastError;
-        if (err) reject(new Error(err.message));
-      });
+      this.pendingResolve = resolve;
+      this.pendingReject = reject;
+      try {
+        this.getPort().postMessage(request);
+      } catch (e) {
+        this.pendingResolve = null;
+        this.pendingReject = null;
+        reject(e instanceof Error ? e : new Error(String(e)));
+      }
     });
 
     if (!response.ok) {
-      // Auto-detect with same-language content causes API errors — show original
       if (sourceLanguage === 'auto') return text;
       throw new Error(response.error);
     }
@@ -44,5 +65,13 @@ export class Translator {
 
     this.cache.set(text, `${sourceLanguage}:${targetLanguage}`, response.result);
     return response.result;
+  }
+
+  // Call on SPA navigation to reset session state and detected language cache.
+  resetSession(): void {
+    this.port?.disconnect();
+    this.port = null;
+    this.pendingResolve = null;
+    this.pendingReject = null;
   }
 }
